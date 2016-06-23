@@ -1,8 +1,8 @@
 # KoalaSendGrid
 This is still an alpha release. Feel free to use it but please report any problems.
 
-You need a config file which includes your sendgrid login details, plus the following:
-- app_name
+You need a config file which includes the following:
+- sendgrid_api_key
 - sendgrid_default_subject
 - sendgrid_from_address
 - sendgrid_from_name
