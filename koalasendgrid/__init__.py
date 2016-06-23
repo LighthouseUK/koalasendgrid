@@ -10,52 +10,51 @@
 
 import config
 import sendgrid
+from sendgrid.helpers.mail import *
 
 __author__ = 'Matt'
 
 
-username = config.settings.get('sendgrid_username')
-password = config.settings.get('sendgrid_password')
-SENDGRID_CLIENT = sendgrid.SendGridClient(username_or_apikey=username, password=password, raise_errors=True)
+api_key = config.secrets.get('sendgrid_api_key')
+SENDGRID_CLIENT = sendgrid.SendGridAPIClient(apikey=api_key)
 
-APP_NAME = config.settings.get('app_name')
-DEFAULT_SUBJECT = config.settings.get('sendgrid_default_subject')
-DEFAULT_FROM_ADDRESS = config.settings.get('sendgrid_from_address')
-DEFAULT_FROM_NAME = config.settings.get('sendgrid_from_name')
-AUTOMATIC_BCC = config.settings.getlist('sendgrid_automatic_bcc')
+DEFAULT_SUBJECT = config.secrets.get('sendgrid_default_subject')
+DEFAULT_FROM_ADDRESS = config.secrets.get('sendgrid_from_address')
+DEFAULT_FROM_NAME = config.secrets.get('sendgrid_from_name')
+AUTOMATIC_BCC = config.secrets.getlist('sendgrid_automatic_bcc')
 
 
 def send_email(to_address, body, subject=DEFAULT_SUBJECT, to_name=None, from_address=DEFAULT_FROM_ADDRESS,
                from_name=DEFAULT_FROM_NAME, html=True, attachment_name=None, attachment_content_buffer=None,
                additional_bcc=None):
 
-    message = sendgrid.Mail()
-
-    if not to_name:
-        message.add_to(u'{0}'.format(to_address))
-    else:
-        message.add_to(u'{0} <{1}>'.format(to_name, to_address))
-
+    message = Mail()
     message.set_subject(subject)
-    if html:
-        message.set_html(body)
-    else:
-        message.set_text(body)
+    message.set_from(Email(from_address, from_name))
 
-    if not from_name:
-        message.set_from(u'{0}'.format(from_address))
+    personalization = Personalization()
+    personalization.add_to(Email(to_address, to_name))
+
+    if html:
+        message.add_content(Content("text/html", body))
     else:
-        message.set_from(u'{0} <{1}>'.format(from_name, from_address))
+        message.add_content(Content("text/plain", body))
 
     for bcc_address in AUTOMATIC_BCC:
-        message.add_bcc(bcc_address)
+        personalization.add_bcc(Email(bcc_address))
 
     if additional_bcc is not None:
-        for bcc in additional_bcc:
-            message.add_bcc(bcc)
+        for bcc_address in additional_bcc:
+            personalization.add_bcc(Email(bcc_address))
+
+    message.add_personalization(personalization)
 
     if attachment_content_buffer and attachment_name:
-        message.add_attachment(attachment_name, attachment_content_buffer)
+        attachment = Attachment()
+        attachment.set_content(attachment_content_buffer)
+        attachment.set_filename(attachment_name)
+        attachment.set_disposition("attachment")
+        message.add_attachment(attachment)
 
-    return SENDGRID_CLIENT.send(message)
+    return SENDGRID_CLIENT.client.mail.send.post(request_body=message.get())
 
