@@ -41,7 +41,8 @@ def send_email(to_address, body, subject=DEFAULT_SUBJECT, to_name=None, from_add
         message.add_content(Content("text/plain", body))
 
     for bcc_address in AUTOMATIC_BCC:
-        personalization.add_bcc(Email(bcc_address))
+        if bcc_address != to_address:
+            personalization.add_bcc(Email(bcc_address))
 
     if additional_bcc is not None:
         for bcc_address in additional_bcc:
